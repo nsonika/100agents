@@ -1,12 +1,39 @@
 "use client";
 
+import { SignInButton, SignUpButton, SignOutButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { WavyBackground } from "@/components/ui/wavy-background";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import Link from "next/link";
+import { useContext } from "react";
+import { useState } from "react";
+import { MessagesContext } from "./provider";
+// Import useRouter from next/navigation instead of next/router in Next.js 13+
+import { useRouter } from "next/navigation";
+import { UserDetailContext } from "./provider";
 
 export default function Home() {
+  const [userInput, setUserInput] = useState<string>("");
+  const { messages, setMessages } = useContext(MessagesContext);
+  const { userDetail, setUserDetail } = useContext(UserDetailContext);
+  const { isSignedIn, user } = useUser();
+
+  const router = useRouter();
+  
+  const onGenerate = async (input: string) => {
+    if (!input) return;
+    
+    // Add the user message to the messages context
+    setMessages((prev: any) => [...(prev || []), {
+      role: 'user',
+      content: input,
+    }]);
+    
+    // Here you can add logic to process the input, like sending to an API
+    console.log("Processing input:", input);
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#0a0a0a] via-[#0f1a25] to-black
 ">
@@ -23,19 +50,51 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-        <Button className="bg-transparent text-white border border-white/20 hover:border-white hover:bg-white/10 transition">
-          Sign In
-        </Button>
+          {!isSignedIn ? (
+            <>
+              <SignInButton mode="modal">
+                <Button variant="outline" className="bg-transparent text-white border border-white/20 hover:border-white hover:bg-white/10 transition">
+                  Sign In
+                </Button>
+              </SignInButton>
 
-
-        <Button className="bg-white text-black font-medium hover:bg-neutral-100 transition">
-          Get Started
-        </Button>
-
+              <SignUpButton mode="modal">
+                <Button className="bg-white text-black font-medium hover:bg-neutral-100 transition">
+                  Get Started
+                </Button>
+              </SignUpButton>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mr-4">
+                <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                  {user?.imageUrl ? (
+                    <Image 
+                      src={user.imageUrl} 
+                      alt="Profile" 
+                      width={32} 
+                      height={32} 
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="text-xs text-white">{user?.firstName?.[0] || 'U'}</span>
+                  )}
+                </div>
+                <span className="text-white">{user?.firstName || 'User'}</span>
+              </div>
+              
+              <SignOutButton>
+                <Button variant="outline" className="bg-transparent text-white border border-white/20 hover:border-white hover:bg-white/10 transition">
+                  Sign Out
+                </Button>
+              </SignOutButton>
+            </>
+          )}
         </div>
       </nav>
       
-      {/* <WavyBackground 
+      <WavyBackground 
         className="max-w-4xl mx-auto px-8 w-full text-center" 
         colors={["#38bdf8", "#818cf8", "#c084fc", "#e879f9", "#22d3ee"]} 
         waveWidth={100} 
@@ -43,7 +102,7 @@ export default function Home() {
         blur={10}
         speed="slow"
         waveOpacity={0.6}
-      > */}
+      >
         <div className="relative z-10 w-full max-w-5xl mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 max-w-3xl mx-auto mb-12">
           Turn any idea into a working web app
@@ -62,11 +121,15 @@ export default function Home() {
                     "Make an AI study buddy...",
                     "Create a personal portfolio..."
                   ]}
-                  onChange={(e) => console.log(e.target.value)}
+                  onChange={(e) => setUserInput(e.target.value)}
                   onSubmit={(e) => {
                     e.preventDefault();
-                    // Access the input value directly from the event target
-                    // since the component handles the form submission internally
+                    // Only process if we have input
+                    if (userInput.trim()) {
+                      onGenerate(userInput);
+                      // Clear the input after submission
+                      setUserInput("");
+                    }
                     console.log("Submitted form");
                   }}
                 />
@@ -88,10 +151,10 @@ export default function Home() {
               </Button>
             </div>
           </div>
-          
-          {/* Removed the buttons from here as they're now in the nav bar */}
+
+          {/* Buttons are now in the nav bar */}
         </div>
-      {/* </WavyBackground> */}
+      </WavyBackground>
     </main>
   );
 }
